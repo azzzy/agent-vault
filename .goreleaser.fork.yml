@@ -1,0 +1,60 @@
+version: 2
+
+before:
+  hooks:
+    - make web
+
+builds:
+  - id: agent-vault
+    binary: agent-vault
+    main: .
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/Infisical/agent-vault/cmd.version={{.Version}}
+      - -X github.com/Infisical/agent-vault/cmd.commit={{.ShortCommit}}
+      - -X github.com/Infisical/agent-vault/cmd.date={{.Date}}
+    goos:
+      - linux
+    goarch:
+      - amd64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: "agent-vault_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE*
+      - README*
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+signs:
+  - cmd: cosign
+    artifacts: checksum
+    output: true
+    args:
+      - sign-blob
+      - --yes
+      - --bundle=${signature}
+      - ${artifact}
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+
+release:
+  draft: false
+  prerelease: auto
+  make_latest: false
